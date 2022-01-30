@@ -20,13 +20,13 @@ EspMQTTClient client(
     MQTT_SERVER,
     MQTT_USERNAME,
     MQTT_PASSWORD,
-    CLIENT_NAME,
-    1883 // MQTT Broker Port. Can be omitted
+    CLIENT_NAME, // Client name that uniquely identify your device
+    1883         // The MQTT port, default to 1883. this line can be omitted
 );
 
-#define BASIC_TOPIC CLIENT_NAME "/"
-#define BASIC_TOPIC_SET BASIC_TOPIC "set/"
-#define BASIC_TOPIC_STATUS BASIC_TOPIC "status/"
+#define BASE_TOPIC CLIENT_NAME "/"
+#define BASE_TOPIC_SET BASE_TOPIC "set/"
+#define BASE_TOPIC_STATUS BASE_TOPIC "status/"
 
 #ifdef ESP8266
   #define LED_BUILTIN_ON LOW
@@ -36,12 +36,27 @@ EspMQTTClient client(
   #define LED_BUILTIN_OFF LOW
 #endif
 
-MQTTKalmanPublish mkCommandsPerSecond(client, BASIC_TOPIC_STATUS "commands-per-second", false, 12 * 1 /* every 1 min */, 10);
-MQTTKalmanPublish mkKilobytesPerSecond(client, BASIC_TOPIC_STATUS "kilobytes-per-second", false, 12 * 1 /* every 1 min */, 10);
-MQTTKalmanPublish mkRssi(client, BASIC_TOPIC_STATUS "rssi", MQTT_RETAINED, 12 * 5 /* every 5 min */, 10);
+MQTTKalmanPublish mkRssi(client, BASE_TOPIC_STATUS "rssi", MQTT_RETAINED, 12 * 5 /* every 5 min */, 10);
 
 boolean on = false;
 uint8_t mqttBri = 0;
+
+void testMatrix() {
+  Serial.println("Fill screen: RED");
+  matrix_fill(255, 0, 0);
+  matrix_update();
+  delay(250);
+
+  Serial.println("Fill screen: GREEN");
+  matrix_fill(0, 255, 0);
+  matrix_update();
+  delay(250);
+
+  Serial.println("Fill screen: BLUE");
+  matrix_fill(0, 0, 255);
+  matrix_update();
+  delay(250);
+}
 
 void setup()
 {
@@ -54,51 +69,37 @@ void setup()
   client.enableDebuggingMessages();
   client.enableHTTPWebUpdater();
   client.enableOTA();
-  client.enableLastWillMessage(BASIC_TOPIC "connected", "0", MQTT_RETAINED);
+  client.enableLastWillMessage(BASE_TOPIC "connected", "0", MQTT_RETAINED);
 
-  // // well, hope we are OK, let's draw some colors first :)
-  // Serial.println("Fill screen: RED");
-  // matrix_fill(255, 0, 0);
-  // matrix_update();
-  // delay(250);
+  // well, hope we are OK, let's draw some colors first :)
+  // testMatrix();
 
-  // Serial.println("Fill screen: GREEN");
-  // matrix_fill(0, 255, 0);
-  // matrix_update();
-  // delay(250);
-
-  // Serial.println("Fill screen: BLUE");
-  // matrix_fill(0, 0, 255);
-  // matrix_update();
-  // delay(250);
-
-  // Serial.println("Fill screen: BLACK");
   matrix_fill(0, 0, 0);
   matrix_update();
-  // delay(250);
 
   Serial.println("Setup done...");
 }
 
 void onConnectionEstablished()
 {
-  client.subscribe(BASIC_TOPIC_SET "bri", [](const String &payload) {
+  client.subscribe(BASE_TOPIC_SET "bri", [](const String &payload) {
     int value = strtol(payload.c_str(), 0, 10);
     mqttBri = max(1, min(255 >> BRIGHTNESS_SCALE, value));
     matrix_brightness((mqttBri << BRIGHTNESS_SCALE) * on);
-    client.publish(BASIC_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
+    client.publish(BASE_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
   });
 
-  client.subscribe(BASIC_TOPIC_SET "on", [](const String &payload) {
+  client.subscribe(BASE_TOPIC_SET "on", [](const String &payload) {
     boolean value = payload != "0";
     on = value;
     matrix_brightness((mqttBri << BRIGHTNESS_SCALE) * on);
-    client.publish(BASIC_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
+    client.publish(BASE_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
   });
 
-  client.publish(BASIC_TOPIC "connected", "2", MQTT_RETAINED);
-  client.publish(BASIC_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
-  client.publish(BASIC_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
+  client.publish(BASE_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
+  client.publish(BASE_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
+  client.publish(BASE_TOPIC "git-version", GIT_VERSION, MQTT_RETAINED);
+  client.publish(BASE_TOPIC "connected", "2", MQTT_RETAINED);
 }
 
 // see https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
