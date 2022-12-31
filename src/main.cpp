@@ -100,17 +100,16 @@ void onConnectionEstablished()
 }
 
 // see https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-void set_hsv(uint16_t x, uint16_t y, uint16_t hue, uint8_t sat, uint8_t bri)
+// hue 0.0 - 360.0
+// sat 0.0 - 1.0
+// bri 0.0 - 1.0
+void set_hsv(uint16_t x, uint16_t y, float h, float s, float v)
 {
-  double h = hue;
-  double s = sat / 255.0;
-  double v = bri / 255.0;
-
-  double hh, p, q, t, ff;
+  float hh, p, q, t, ff;
   long i;
-  double r, g, b;
+  float r, g, b;
 
-  if (s <= 0.0) // < is bogus, just shuts up warnings
+  if (s <= 0.0f) // < is bogus, just shuts up warnings
   {
     r = v;
     g = v;
@@ -119,14 +118,14 @@ void set_hsv(uint16_t x, uint16_t y, uint16_t hue, uint8_t sat, uint8_t bri)
   else
   {
     hh = h;
-    if (hh >= 360.0)
-      hh = 0.0;
-    hh /= 60.0;
+    if (hh >= 360.0f)
+      hh = 0.0f;
+    hh /= 60.0f;
     i = (long)hh;
     ff = hh - i;
-    p = v * (1.0 - s);
-    q = v * (1.0 - (s * ff));
-    t = v * (1.0 - (s * (1.0 - ff)));
+    p = v * (1.0f - s);
+    q = v * (1.0f - (s * ff));
+    t = v * (1.0f - (s * (1.0f - ff)));
 
     switch (i)
     {
@@ -168,9 +167,9 @@ void set_hsv(uint16_t x, uint16_t y, uint16_t hue, uint8_t sat, uint8_t bri)
   matrix_pixel(x, y, r * 255, g * 255, b * 255);
 }
 
-uint8_t hues[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
-uint8_t saturations[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
-uint8_t brightnesses[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
+float hues[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
+float saturations[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
+float brightnesses[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
 
 struct Firework
 {
@@ -237,8 +236,8 @@ void create_firework()
 
 void advance_firework(struct Firework &firework)
 {
-  uint8_t sat = min(255, firework.distance * 20);
-  uint8_t bri = 255 - min(255, firework.distance * 8);
+  float sat = min(1.0f, firework.distance * 0.08f);
+  float bri = 1.0f - min(1.0f, firework.distance * 0.03f);
 
   auto small_x = firework.center_x - firework.distance;
   auto small_y = firework.center_y - firework.distance;
@@ -296,13 +295,13 @@ void animation_fireworks()
       auto index = calc_point(x, y);
       set_hsv(x, y, hues[index], saturations[index], brightnesses[index]);
 
-      if (saturations[index] < 255)
+      if (saturations[index] < 1.0f)
       {
-        saturations[index] = min(255, saturations[index] + 10);
+        saturations[index] = min(1.0f, saturations[index] + 0.04f);
       }
-      if (brightnesses[index] > 0)
+      if (brightnesses[index] > 0.0f)
       {
-        brightnesses[index] = max(0, brightnesses[index] - 12);
+        brightnesses[index] = max(0.0f, brightnesses[index] - 0.05f);
       }
     }
   }
