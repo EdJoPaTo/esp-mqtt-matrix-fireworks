@@ -83,21 +83,18 @@ void setup()
 void onConnectionEstablished()
 {
   client.subscribe(BASE_TOPIC_SET "bri", [](const String &payload) {
-    int value = strtol(payload.c_str(), 0, 10);
-    mqttBri = max(1, min(255 >> BRIGHTNESS_SCALE, value));
+    auto value = strtol(payload.c_str(), 0, 10);
+    mqttBri = max(1l, min(255l >> BRIGHTNESS_SCALE, value));
     matrix_brightness((mqttBri << BRIGHTNESS_SCALE) * on);
     client.publish(BASE_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
   });
 
   client.subscribe(BASE_TOPIC_SET "on", [](const String &payload) {
-    boolean value = payload != "0";
-    on = value;
+    on = payload == "1" || payload == "true";
     matrix_brightness((mqttBri << BRIGHTNESS_SCALE) * on);
     client.publish(BASE_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
   });
 
-  client.publish(BASE_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
-  client.publish(BASE_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
   client.publish(BASE_TOPIC "git-version", GIT_VERSION, MQTT_RETAINED);
   client.publish(BASE_TOPIC "connected", "2", MQTT_RETAINED);
 }
@@ -184,10 +181,7 @@ struct Firework
 };
 
 const size_t FIREWORK_AMOUNT = 10;
-Firework fireworks[FIREWORK_AMOUNT] = {};
-unsigned long nextMeasure = 0;
-unsigned long nextFireworkMillis = 0;
-size_t nextFireworkIndex = 0;
+struct Firework fireworks[FIREWORK_AMOUNT] = {};
 
 uint16_t calc_point(uint16_t x, uint16_t y)
 {
@@ -209,6 +203,7 @@ bool similar_firework_exists(uint16_t x, uint16_t y)
 
 void create_firework()
 {
+  static unsigned long nextFireworkMillis = 0;
   if (millis() >= nextFireworkMillis)
   {
     uint16_t center_x = millis() % TOTAL_WIDTH;
@@ -223,6 +218,7 @@ void create_firework()
       center_y %= TOTAL_HEIGHT;
     }
 
+    static size_t nextFireworkIndex = 0;
     if (fireworks[nextFireworkIndex].distance > max(TOTAL_WIDTH, TOTAL_HEIGHT))
     {
       fireworks[nextFireworkIndex] = Firework{
@@ -319,18 +315,13 @@ void loop()
 
   auto now = millis();
 
-  if (client.isConnected())
+  static unsigned long nextMeasure = 0;
+  if (now >= nextMeasure && client.isWifiConnected())
   {
-    if (now >= nextMeasure)
-    {
-      nextMeasure = now + 5000;
-      long rssi = WiFi.RSSI();
-      float avgRssi = mkRssi.addMeasurement(rssi);
-      Serial.print("RSSI        in dBm:     ");
-      Serial.print(String(rssi).c_str());
-      Serial.print("   Average: ");
-      Serial.println(String(avgRssi).c_str());
-    }
+    nextMeasure = now + 5000;
+    auto rssi = WiFi.RSSI();
+    auto avgRssi = mkRssi.addMeasurement(rssi);
+    Serial.printf("RSSI          in dBm: %8d    Average: %10.2f\n", rssi, avgRssi);
   }
 
   animation_fireworks();
