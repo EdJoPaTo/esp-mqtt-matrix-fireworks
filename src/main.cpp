@@ -180,7 +180,7 @@ struct Firework
   uint16_t distance;
 };
 
-const size_t FIREWORK_AMOUNT = 10;
+const size_t FIREWORK_AMOUNT = 6;
 struct Firework fireworks[FIREWORK_AMOUNT] = {};
 
 uint16_t calc_point(uint16_t x, uint16_t y)
