@@ -105,8 +105,6 @@ void onConnectionEstablished()
 // bri 0.0 - 1.0
 void set_hsv(uint16_t x, uint16_t y, float h, float s, float v)
 {
-  float hh, p, q, t, ff;
-  long i;
   float r, g, b;
 
   if (s <= 0.0f) // < is bogus, just shuts up warnings
@@ -117,15 +115,15 @@ void set_hsv(uint16_t x, uint16_t y, float h, float s, float v)
   }
   else
   {
-    hh = h;
+    float hh = h;
     if (hh >= 360.0f)
       hh = 0.0f;
     hh /= 60.0f;
-    i = (long)hh;
-    ff = hh - i;
-    p = v * (1.0f - s);
-    q = v * (1.0f - (s * ff));
-    t = v * (1.0f - (s * (1.0f - ff)));
+    long i = (long)hh;
+    float ff = hh - i;
+    float p = v * (1.0f - s);
+    float q = v * (1.0f - (s * ff));
+    float t = v * (1.0f - (s * (1.0f - ff)));
 
     switch (i)
     {
