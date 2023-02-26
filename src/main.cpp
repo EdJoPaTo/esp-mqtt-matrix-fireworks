@@ -11,7 +11,6 @@
 #include "matrix-testing.h"
 #endif
 
-#define CLIENT_NAME "espFireworks"
 const bool MQTT_RETAINED = false;
 
 EspMQTTClient client(
@@ -20,9 +19,8 @@ EspMQTTClient client(
     MQTT_SERVER,
     MQTT_USERNAME,
     MQTT_PASSWORD,
-    CLIENT_NAME, // Client name that uniquely identify your device
-    1883         // The MQTT port, default to 1883. this line can be omitted
-);
+    CLIENT_NAME,
+    1883);
 
 #define BASE_TOPIC CLIENT_NAME "/"
 #define BASE_TOPIC_SET BASE_TOPIC "set/"
@@ -95,6 +93,7 @@ void onConnectionEstablished()
     client.publish(BASE_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
   });
 
+  client.publish(BASE_TOPIC "git-remote", GIT_REMOTE, MQTT_RETAINED);
   client.publish(BASE_TOPIC "git-version", GIT_VERSION, MQTT_RETAINED);
   client.publish(BASE_TOPIC "connected", "2", MQTT_RETAINED);
 }
