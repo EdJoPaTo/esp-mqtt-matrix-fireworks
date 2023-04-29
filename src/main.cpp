@@ -36,7 +36,7 @@ EspMQTTClient client(
 
 MQTTKalmanPublish mkRssi(client, BASE_TOPIC_STATUS "rssi", MQTT_RETAINED, 12 * 5 /* every 5 min */, 10);
 
-boolean on = false;
+bool on = false;
 uint8_t mqttBri = 0;
 
 void testMatrix() {
