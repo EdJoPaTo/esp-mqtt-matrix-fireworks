@@ -3,13 +3,7 @@
 #include <MqttKalmanPublish.h>
 #include <vector>
 
-#ifdef I2SMATRIX
-#include "matrix-i2s.h"
-#elif NEOMATRIX
-#include "matrix-neomatrix.h"
-#else
-#include "matrix-testing.h"
-#endif
+#include "matrix.h"
 
 const bool MQTT_RETAINED = false;
 
@@ -63,7 +57,7 @@ void setup()
 	Serial.begin(115200);
 	Serial.println();
 
-	matrix_setup(mqttBri << BRIGHTNESS_SCALE);
+	matrix_setup(mqttBri);
 
 	client.enableDebuggingMessages();
 	client.enableHTTPWebUpdater();
@@ -83,14 +77,14 @@ void onConnectionEstablished()
 {
 	client.subscribe(BASE_TOPIC_SET "bri", [](const String &payload) {
 		auto value = strtol(payload.c_str(), 0, 10);
-		mqttBri = max(1l, min(255l >> BRIGHTNESS_SCALE, value));
-		matrix_brightness((mqttBri << BRIGHTNESS_SCALE) * on);
+		mqttBri = max(1l, min(255l, value));
+		matrix_brightness(mqttBri * on);
 		client.publish(BASE_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
 	});
 
 	client.subscribe(BASE_TOPIC_SET "on", [](const String &payload) {
 		on = payload == "1" || payload == "true";
-		matrix_brightness((mqttBri << BRIGHTNESS_SCALE) * on);
+		matrix_brightness(mqttBri * on);
 		client.publish(BASE_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
 	});
 

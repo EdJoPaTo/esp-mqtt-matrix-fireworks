@@ -5,9 +5,6 @@ const uint16_t TOTAL_HEIGHT = 16;
 
 const int PIN_MATRIX = 13; // D7
 
-// mqttBri << BRIGHTNESS_SCALE -> full scale seems to be available
-#define BRIGHTNESS_SCALE 0
-
 // MATRIX DECLARATION:
 // Parameter 1 = width of NeoPixel matrix
 // Parameter 2 = height of matrix
