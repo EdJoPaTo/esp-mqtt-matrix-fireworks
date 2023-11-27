@@ -17,33 +17,33 @@ MatrixPanel_I2S_DMA *dma_display = nullptr;
 
 void matrix_setup(uint8_t brightness)
 {
-    HUB75_I2S_CFG mxconfig;
-    mxconfig.mx_height = PANEL_HEIGHT;
-    mxconfig.chain_length = PANELS_NUMBER;
-    mxconfig.gpio.e = PIN_E;
-    dma_display = new MatrixPanel_I2S_DMA(mxconfig);
-    dma_display->setBrightness8(brightness);
+	HUB75_I2S_CFG mxconfig;
+	mxconfig.mx_height = PANEL_HEIGHT;
+	mxconfig.chain_length = PANELS_NUMBER;
+	mxconfig.gpio.e = PIN_E;
+	dma_display = new MatrixPanel_I2S_DMA(mxconfig);
+	dma_display->setBrightness8(brightness);
 
-    // Allocate memory and start DMA display
-    if (not dma_display->begin())
-    {
-        Serial.println("****** !KABOOM! I2S memory allocation failed ***********");
-    }
+	// Allocate memory and start DMA display
+	if (not dma_display->begin())
+	{
+		Serial.println("****** !KABOOM! I2S memory allocation failed ***********");
+	}
 }
 
 void matrix_brightness(uint8_t brightness)
 {
-    dma_display->setBrightness8(brightness);
+	dma_display->setBrightness8(brightness);
 }
 
 void matrix_update() {}
 
 void matrix_fill(uint8_t red, uint8_t green, uint8_t blue)
 {
-    dma_display->fillScreenRGB888(red, green, blue);
+	dma_display->fillScreenRGB888(red, green, blue);
 }
 
 void matrix_pixel(uint16_t x, uint16_t y, uint8_t red, uint8_t green, uint8_t blue)
 {
-    dma_display->drawPixelRGB888(x, y, red, green, blue);
+	dma_display->drawPixelRGB888(x, y, red, green, blue);
 }

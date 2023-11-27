@@ -39,26 +39,26 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(TOTAL_WIDTH, TOTAL_HEIGHT, PIN_MA
 
 void matrix_setup(uint8_t brightness)
 {
-    matrix.begin();
-    matrix.setBrightness(brightness);
+	matrix.begin();
+	matrix.setBrightness(brightness);
 }
 
 void matrix_brightness(uint8_t brightness)
 {
-    matrix.setBrightness(brightness);
+	matrix.setBrightness(brightness);
 }
 
 void matrix_update()
 {
-    matrix.show();
+	matrix.show();
 }
 
 void matrix_fill(uint8_t red, uint8_t green, uint8_t blue)
 {
-    matrix.fillScreen(matrix.Color(red, green, blue));
+	matrix.fillScreen(matrix.Color(red, green, blue));
 }
 
 void matrix_pixel(uint16_t x, uint16_t y, uint8_t red, uint8_t green, uint8_t blue)
 {
-    matrix.drawPixel(x, y, matrix.Color(red, green, blue));
+	matrix.drawPixel(x, y, matrix.Color(red, green, blue));
 }

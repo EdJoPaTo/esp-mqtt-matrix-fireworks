@@ -6,7 +6,7 @@ const uint16_t TOTAL_HEIGHT = 42;
 
 void matrix_setup(uint8_t brightness)
 {
-    Serial.println("Matrix setup done...");
+	Serial.println("Matrix setup done...");
 }
 
 void matrix_brightness(uint8_t brightness)
