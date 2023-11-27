@@ -30,24 +30,25 @@ EspMQTTClient client(
 
 MQTTKalmanPublish mkRssi(client, BASE_TOPIC_STATUS "rssi", MQTT_RETAINED, 12 * 5 /* every 5 min */, 10);
 
+// Percentage from 0.0f to 1.0f
+float bri = 0;
 bool on = false;
-uint8_t mqttBri = 0;
 
 void testMatrix()
 {
 	Serial.println("Fill screen: RED");
-	matrix_fill(255, 0, 0);
-	matrix_update();
+	strip.ClearTo(RgbColor(20, 0, 0));
+	strip.Show();
 	delay(250);
 
 	Serial.println("Fill screen: GREEN");
-	matrix_fill(0, 255, 0);
-	matrix_update();
+	strip.ClearTo(RgbColor(0, 20, 0));
+	strip.Show();
 	delay(250);
 
 	Serial.println("Fill screen: BLUE");
-	matrix_fill(0, 0, 255);
-	matrix_update();
+	strip.ClearTo(RgbColor(0, 0, 20));
+	strip.Show();
 	delay(250);
 }
 
@@ -57,7 +58,7 @@ void setup()
 	Serial.begin(115200);
 	Serial.println();
 
-	matrix_setup(mqttBri);
+	strip.Begin();
 
 	client.enableDebuggingMessages();
 	client.enableHTTPWebUpdater();
@@ -67,8 +68,8 @@ void setup()
 	// well, hope we are OK, let's draw some colors first :)
 	// testMatrix();
 
-	matrix_fill(0, 0, 0);
-	matrix_update();
+	strip.ClearTo(0);
+	strip.Show();
 
 	Serial.println("Setup done...");
 }
@@ -76,15 +77,14 @@ void setup()
 void onConnectionEstablished()
 {
 	client.subscribe(BASE_TOPIC_SET "bri", [](const String &payload) {
-		auto value = strtol(payload.c_str(), 0, 10);
-		mqttBri = max(1l, min(255l, value));
-		matrix_brightness(mqttBri * on);
-		client.publish(BASE_TOPIC_STATUS "bri", String(mqttBri), MQTT_RETAINED);
+		auto value = strtof(payload.c_str(), 0) / 100.0f;
+		if (!isfinite(value)) return;
+		bri = max(1 / 255.0f, min(1.0f, value));
+		client.publish(BASE_TOPIC_STATUS "bri", String(bri * 100), MQTT_RETAINED);
 	});
 
 	client.subscribe(BASE_TOPIC_SET "on", [](const String &payload) {
 		on = payload == "1" || payload == "true";
-		matrix_brightness(mqttBri * on);
 		client.publish(BASE_TOPIC_STATUS "on", String(on), MQTT_RETAINED);
 	});
 
@@ -93,81 +93,16 @@ void onConnectionEstablished()
 	client.publish(BASE_TOPIC "connected", "2", MQTT_RETAINED);
 }
 
-// see https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-// hue 0.0 - 360.0
-// sat 0.0 - 1.0
-// bri 0.0 - 1.0
-void set_hsv(uint16_t x, uint16_t y, float h, float s, float v)
-{
-	float r, g, b;
-
-	if (s <= 0.0f) // < is bogus, just shuts up warnings
-	{
-		r = v;
-		g = v;
-		b = v;
-	}
-	else
-	{
-		float hh = h;
-		if (hh >= 360.0f)
-			hh = 0.0f;
-		hh /= 60.0f;
-		long i = (long)hh;
-		float ff = hh - i;
-		float p = v * (1.0f - s);
-		float q = v * (1.0f - (s * ff));
-		float t = v * (1.0f - (s * (1.0f - ff)));
-
-		switch (i)
-		{
-		case 0:
-			r = v;
-			g = t;
-			b = p;
-			break;
-		case 1:
-			r = q;
-			g = v;
-			b = p;
-			break;
-		case 2:
-			r = p;
-			g = v;
-			b = t;
-			break;
-
-		case 3:
-			r = p;
-			g = q;
-			b = v;
-			break;
-		case 4:
-			r = t;
-			g = p;
-			b = v;
-			break;
-		case 5:
-		default:
-			r = v;
-			g = p;
-			b = q;
-			break;
-		}
-	}
-
-	matrix_pixel(x, y, r * 255, g * 255, b * 255);
-}
-
-float hues[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
-float saturations[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
-float brightnesses[TOTAL_WIDTH * TOTAL_HEIGHT] = {};
+// All values 0.0 - 1.0
+float hues[TOTAL_PIXELS] = {};
+float saturations[TOTAL_PIXELS] = {};
+float brightnesses[TOTAL_PIXELS] = {};
 
 struct Firework
 {
 	uint16_t center_x;
 	uint16_t center_y;
-	uint16_t hue;
+	float hue;
 	uint16_t distance;
 };
 
@@ -195,11 +130,11 @@ bool similar_firework_exists(uint16_t x, uint16_t y)
 void create_firework()
 {
 	static unsigned long nextFireworkMillis = 0;
-	if (millis() >= nextFireworkMillis)
+	if (on && millis() >= nextFireworkMillis)
 	{
 		uint16_t center_x = millis() % TOTAL_WIDTH;
 		uint16_t center_y = micros() % TOTAL_HEIGHT;
-		uint16_t hue = millis() % 360;
+		float hue = (millis() % 360) / 360.0f;
 
 		while (similar_firework_exists(center_x, center_y))
 		{
@@ -236,7 +171,7 @@ void advance_firework(struct Firework &firework)
 	auto big_x = firework.center_x + firework.distance;
 	auto big_y = firework.center_y + firework.distance;
 
-	auto index1 = calc_point(small_x, firework.center_y);
+	auto index1 = topo.Map(small_x, firework.center_y);
 	if (small_x >= 0 && brightnesses[index1] < bri)
 	{
 		hues[index1] = firework.hue;
@@ -244,7 +179,7 @@ void advance_firework(struct Firework &firework)
 		brightnesses[index1] = bri;
 	}
 
-	auto index2 = calc_point(firework.center_x, small_y);
+	auto index2 = topo.Map(firework.center_x, small_y);
 	if (small_y >= 0 && brightnesses[index2] < bri)
 	{
 		hues[index2] = firework.hue;
@@ -252,7 +187,7 @@ void advance_firework(struct Firework &firework)
 		brightnesses[index2] = bri;
 	}
 
-	auto index3 = calc_point(big_x, firework.center_y);
+	auto index3 = topo.Map(big_x, firework.center_y);
 	if (big_x < TOTAL_WIDTH && brightnesses[index3] < bri)
 	{
 		hues[index3] = firework.hue;
@@ -260,7 +195,7 @@ void advance_firework(struct Firework &firework)
 		brightnesses[index3] = bri;
 	}
 
-	auto index4 = calc_point(firework.center_x, big_y);
+	auto index4 = topo.Map(firework.center_x, big_y);
 	if (big_y < TOTAL_HEIGHT && brightnesses[index4] < bri)
 	{
 		hues[index4] = firework.hue;
@@ -284,8 +219,9 @@ void animation_fireworks()
 	{
 		for (uint16_t y = 0; y < TOTAL_HEIGHT; y++)
 		{
-			auto index = calc_point(x, y);
-			set_hsv(x, y, hues[index], saturations[index], brightnesses[index]);
+			auto index = topo.Map(x, y);
+			auto color = HsbColor(hues[index], saturations[index], brightnesses[index] * bri);
+			strip.SetPixelColor(index, color);
 
 			if (saturations[index] < 1.0f)
 			{
@@ -317,6 +253,6 @@ void loop()
 
 	animation_fireworks();
 
-	matrix_update();
+	strip.Show();
 	delay(10);
 }
